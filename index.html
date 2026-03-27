@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>O Destino de Polycentra</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div class="city-backdrop" aria-hidden="true">
+      <div class="skyline-image"></div>
+      <div class="city-glow city-glow-left"></div>
+      <div class="city-glow city-glow-right"></div>
+      <div class="battle-grid"></div>
+      <div class="target-ring target-ring-a"></div>
+      <div class="target-ring target-ring-b"></div>
+      <div class="scan-lines"></div>
+    </div>
+
+    <header class="top-bar">
+      <div>
+        <p class="eyebrow">Comando Integrado de Polycentra</p>
+        <h1>O Destino de Polycentra</h1>
+        <p class="subtitle">Centro de decisão estratégica da Reboot Syndicate</p>
+      </div>
+      <div class="header-actions">
+        <button id="save-progress" class="action-btn action-primary" type="button">Salvar Progresso</button>
+        <button id="music-toggle" class="action-btn action-primary music-btn" type="button">Música: Ligada</button>
+        <label class="music-volume-wrap" for="music-volume">
+          <span>Volume</span>
+          <input id="music-volume" type="range" min="0" max="100" value="42">
+        </label>
+        <button id="audio-toggle" class="action-btn action-secondary audio-btn" type="button">Som: Ligado</button>
+      </div>
+    </header>
+
+    <main class="main-stage">
+      <section id="screen-menu" class="screen screen-active panel panel-centered">
+        <div class="panel-frame">
+          <p class="panel-tag">War Room Boot</p>
+          <h2>Iniciar Operação</h2>
+          <p class="panel-copy">
+            A cidade pulsa sob caos e vigilância. A sala de guerra aguarda sua autorização para sincronizar operações.
+          </p>
+          <div class="menu-actions">
+            <button class="action-btn action-primary" data-action="new">Novo</button>
+            <button class="action-btn action-secondary" data-action="continue">Continuar</button>
+          </div>
+          <p id="menu-feedback" class="hint-text"></p>
+        </div>
+      </section>
+
+      <section id="screen-strategy" class="screen panel panel-centered">
+        <div class="panel-frame">
+          <p class="panel-tag">Diretriz de Campanha</p>
+          <h2>Escolha a estratégia principal</h2>
+          <p class="panel-copy">
+            A estratégia altera a pressão inicial em cada frente e redefine o peso de cada missão.
+          </p>
+          <div class="strategy-grid" id="strategy-grid"></div>
+          <div class="screen-actions">
+            <button id="strategy-back" class="action-btn action-ghost">Voltar</button>
+            <button id="strategy-confirm" class="action-btn action-primary" disabled>Entrar no Centro de Controle</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-control" class="screen control-screen">
+        <div class="hud-panel strategy-summary">
+          <div>
+            <p class="panel-tag">Estratégia Ativa</p>
+            <h2 id="active-strategy-name">-</h2>
+          </div>
+          <p id="active-strategy-description" class="summary-copy"></p>
+          <div class="summary-stats">
+            <div class="summary-chip">
+              <span class="chip-label">Operações Selecionadas</span>
+              <strong id="selected-missions-count">0</strong>
+            </div>
+            <div class="summary-chip">
+              <span class="chip-label">Resultados Confirmados</span>
+              <strong id="resolved-missions-count">0</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="control-layout">
+          <section class="mission-grid" id="mission-grid"></section>
+
+          <aside class="status-column hud-panel">
+            <div class="status-head">
+              <p class="panel-tag">Leitura Tática</p>
+              <h2>Frentes de Operação</h2>
+            </div>
+            <div id="progress-panel" class="progress-panel"></div>
+          </aside>
+        </div>
+
+        <section class="hud-panel modifier-panel">
+          <div class="modifier-panel-head">
+            <div>
+              <p class="panel-tag">Impacto Tático</p>
+              <h2>Modificadores Selecionados</h2>
+            </div>
+            <p class="summary-copy">Cada missão selecionada aparece aqui com seus efeitos narrativos e operacionais.</p>
+          </div>
+          <div id="modifier-list" class="modifier-list"></div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div id="mission-modal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="true"></div>
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <p class="panel-tag">Seleção de Missões</p>
+          <h2 id="modal-title">-</h2>
+        </div>
+        <button id="modal-close" class="icon-btn" aria-label="Fechar">×</button>
+      </div>
+      <div id="modal-body" class="modal-body"></div>
+    </div>
+  </div>
+
+  <template id="mission-monitor-template">
+    <article class="hud-panel monitor-card">
+      <div class="monitor-header">
+        <div>
+          <p class="panel-tag monitor-icon"></p>
+          <h3 class="monitor-name"></h3>
+        </div>
+        <button class="action-btn action-secondary mission-open-btn">Selecionar Missões</button>
+      </div>
+      <p class="monitor-copy">Escolha operações para esta frente e defina o resultado para recalibrar o avanço.</p>
+      <div class="mission-list"></div>
+    </article>
+  </template>
+
+  <template id="mission-card-template">
+    <label class="mission-option">
+      <div class="mission-option-top">
+        <div>
+          <h3 class="mission-name"></h3>
+          <p class="mission-meta"></p>
+        </div>
+        <input type="checkbox" class="mission-select">
+      </div>
+      <p class="mission-description"></p>
+      <p class="mission-skills"></p>
+      <p class="mission-modifier"></p>
+    </label>
+  </template>
+
+  <script src="script.js"></script>
+</body>
+</html>
