@@ -3,14 +3,14 @@ const STRATEGIES = {
     id: "libertar",
     name: "Libertar Polycentra",
     description: "Expande a resistência civil e militar para derrubar o aparato dominante.",
-    difficulties: { Militar: 4, Social: 2, "Política": 6, "Comunicação": 4 },
+    difficulties: { Militar: 6, Social: 4, "Política": 10, "Comunicação": 6 },
     bonusField: { Militar: "libMil", Social: "libSoc", "Política": "libPol", "Comunicação": "libCom" },
   },
   controlar: {
     id: "controlar",
     name: "Controlar Polycentra",
     description: "Concentra poder, neutraliza ruídos e reorganiza a cidade por controle sistêmico.",
-    difficulties: { Militar: 6, Social: 4, "Política": 4, "Comunicação": 2 },
+    difficulties: { Militar: 10, Social: 6, "Política": 8, "Comunicação": 4 },
     bonusField: { Militar: "conMil", Social: "conSoc", "Política": "conPol", "Comunicação": "conCom" },
   },
 };
@@ -49,6 +49,7 @@ const state = {
   currentScreen: "menu",
   selectedStrategy: null,
   selectedFront: null,
+  modalMissionIndex: 0,
   selections: {},
   audioEnabled: true,
   musicEnabled: true,
@@ -507,38 +508,120 @@ function buildTacticalReading(saldo) {
   return `Faltam ${Math.abs(saldo)} pts para equilibrar a frente.`;
 }
 
+function getPosterPath(mission) {
+  if (mission.poster) {
+    return mission.poster;
+  }
+  return `./assets/posters/${encodeURIComponent(mission.mission)}.png`;
+}
+
+function renderMissionCarousel(frontMissions) {
+  elements.modalBody.innerHTML = "";
+  if (!frontMissions.length) {
+    const empty = document.createElement("p");
+    empty.className = "hint-text";
+    empty.textContent = "Nenhuma missão encontrada para esta frente.";
+    elements.modalBody.appendChild(empty);
+    return;
+  }
+
+  if (state.modalMissionIndex >= frontMissions.length) {
+    state.modalMissionIndex = 0;
+  }
+
+  const mission = frontMissions[state.modalMissionIndex];
+  const selection = state.selections[mission.mission];
+
+  const frame = document.createElement("div");
+  frame.className = "mission-carousel";
+
+  const nav = document.createElement("div");
+  nav.className = "mission-carousel-nav";
+
+  const prevBtn = document.createElement("button");
+  prevBtn.type = "button";
+  prevBtn.className = "action-btn action-ghost carousel-btn";
+  prevBtn.textContent = "◀ Anterior";
+  prevBtn.disabled = state.modalMissionIndex === 0;
+  prevBtn.addEventListener("click", () => {
+    state.modalMissionIndex -= 1;
+    playUiSound("select");
+    renderMissionCarousel(frontMissions);
+  });
+
+  const status = document.createElement("p");
+  status.className = "carousel-status hint-text";
+  status.textContent = `Missão ${state.modalMissionIndex + 1} de ${frontMissions.length}`;
+
+  const nextBtn = document.createElement("button");
+  nextBtn.type = "button";
+  nextBtn.className = "action-btn action-ghost carousel-btn";
+  nextBtn.textContent = "Próxima ▶";
+  nextBtn.disabled = state.modalMissionIndex === frontMissions.length - 1;
+  nextBtn.addEventListener("click", () => {
+    state.modalMissionIndex += 1;
+    playUiSound("select");
+    renderMissionCarousel(frontMissions);
+  });
+
+  nav.append(prevBtn, status, nextBtn);
+
+  const fragment = elements.missionCardTemplate.content.cloneNode(true);
+  fragment.querySelector(".mission-name").textContent = mission.mission;
+  fragment.querySelector(".mission-meta").innerHTML = `<span class="mission-type-badge ${mission.type === "Major" ? "is-major" : "is-minor"}">${mission.type}</span> Vitória: ${mission.victory} | Falha: ${mission.failure}`;
+  fragment.querySelector(".mission-description").textContent = `Descrição: ${mission.description}`;
+  fragment.querySelector(".mission-skills").textContent = `Skills: ${mission.skills}`;
+  fragment.querySelector(".mission-modifier").textContent = `Modificadores: ${mission.modifier}`;
+
+  const poster = fragment.querySelector(".mission-poster");
+  poster.src = getPosterPath(mission);
+  poster.alt = `Pôster da missão ${mission.mission}`;
+  poster.addEventListener("error", () => {
+    poster.src = "./assets/Skyline.png";
+  }, { once: true });
+
+  const checkbox = fragment.querySelector(".mission-select");
+  checkbox.checked = selection.selected;
+  checkbox.addEventListener("change", (event) => {
+    playUiSound(event.target.checked ? "select" : "soft");
+    selection.selected = event.target.checked;
+    if (!event.target.checked) {
+      selection.outcome = "none";
+      selection.leader = "";
+      selection.support = "";
+    }
+    renderMonitorEntries();
+    renderProgress();
+    renderSummaryStats();
+    renderModifiers();
+  });
+
+  const dots = document.createElement("div");
+  dots.className = "mission-carousel-dots";
+  frontMissions.forEach((item, index) => {
+    const dot = document.createElement("button");
+    dot.type = "button";
+    dot.className = `carousel-dot${index === state.modalMissionIndex ? " is-active" : ""}`;
+    dot.setAttribute("aria-label", `Ir para ${item.mission}`);
+    dot.addEventListener("click", () => {
+      state.modalMissionIndex = index;
+      playUiSound("soft");
+      renderMissionCarousel(frontMissions);
+    });
+    dots.appendChild(dot);
+  });
+
+  frame.append(nav, fragment, dots);
+  elements.modalBody.appendChild(frame);
+}
+
 function openModal(frontName) {
   state.selectedFront = frontName;
+  state.modalMissionIndex = 0;
   playUiSound("open");
   elements.modalTitle.textContent = frontName;
-  elements.modalBody.innerHTML = "";
-
-  MISSIONS.filter((mission) => mission.front === frontName).forEach((mission) => {
-    const fragment = elements.missionCardTemplate.content.cloneNode(true);
-    fragment.querySelector(".mission-name").textContent = mission.mission;
-    fragment.querySelector(".mission-meta").innerHTML = `<span class="mission-type-badge ${mission.type === "Major" ? "is-major" : "is-minor"}">${mission.type}</span> Vitória: ${mission.victory} | Falha: ${mission.failure}`;
-    fragment.querySelector(".mission-description").textContent = `Descrição: ${mission.description}`;
-    fragment.querySelector(".mission-skills").textContent = `Skills: ${mission.skills}`;
-    fragment.querySelector(".mission-modifier").textContent = `Modificadores: ${mission.modifier}`;
-
-    const checkbox = fragment.querySelector(".mission-select");
-    checkbox.checked = state.selections[mission.mission].selected;
-    checkbox.addEventListener("change", (event) => {
-      playUiSound(event.target.checked ? "select" : "soft");
-      state.selections[mission.mission].selected = event.target.checked;
-      if (!event.target.checked) {
-        state.selections[mission.mission].outcome = "none";
-        state.selections[mission.mission].leader = "";
-        state.selections[mission.mission].support = "";
-      }
-      renderMonitorEntries();
-      renderProgress();
-      renderSummaryStats();
-      renderModifiers();
-    });
-
-    elements.modalBody.appendChild(fragment);
-  });
+  const frontMissions = MISSIONS.filter((mission) => mission.front === frontName);
+  renderMissionCarousel(frontMissions);
 
   elements.missionModal.classList.add("is-open");
   elements.missionModal.setAttribute("aria-hidden", "false");
